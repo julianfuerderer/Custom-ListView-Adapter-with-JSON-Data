@@ -1,3 +1,5 @@
+
+// tut: http://www.youtube.com/watch?v=0TulTqQM0Cc
 public class MainActivity extends Activity {
 
   // ArrayList of type "Person". We are making not a list of string, sondern eine list of persons
