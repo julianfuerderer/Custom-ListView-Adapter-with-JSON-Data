@@ -1,0 +1,164 @@
+// tut: http://www.youtube.com/watch?v=0TulTqQM0Cc
+
+public class MainActivity extends Activity {
+
+  // ArrayList of type "Person". We are making not a list of string, sondern eine list of persons
+	ArrayList<Person> arrayOfWebData = new ArrayList<Person>();
+	
+	class Person{
+		public String person_id;
+		public String name;
+		public String birthday;
+		public String favorite_color;
+		public String profilbild;
+	}
+	
+	// This is our new Adapter:
+	FancyAdapter aa = null;
+
+	// For each row we returned until we use the array to create our person obj
+	static ArrayList<String> resultRow;
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+		new getJson().execute();
+	}
+
+	// Params,Progress,Result
+	private class getJson extends AsyncTask<Void,Void,Void>
+	{
+		@Override
+		protected Void doInBackground(Void... arg0) {
+			String result = "";
+			try{
+				HttpClient httpClient = new DefaultHttpClient();
+				HttpPost httpPost = new HttpPost("http://www.julianfuerderer.de/json.php");
+				HttpResponse httpResponse = httpClient.execute(httpPost);
+				HttpEntity httpEntity = httpResponse.getEntity();
+				InputStream is = httpEntity.getContent();
+				// Convert response to String:
+				try{
+					BufferedReader reader = new BufferedReader(new InputStreamReader(is,"iso-8859-1"),8);
+					StringBuilder sb = new StringBuilder();
+					String line = null;
+					
+					while((line = reader.readLine()) != null){
+						sb.append(line+"\n");
+					}
+					is.close();
+					result = sb.toString();
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			// Parse JSON:
+			try{
+				JSONArray jArray = new JSONArray(result);
+				for(int i = 0;i < jArray.length();i++)
+				{
+					// Get our object, this is on persons data:
+					JSONObject json_data = jArray.getJSONObject(i);
+					// Create a new person:
+					Person resultRow = new Person();
+					// Set thats persons attributes:
+					resultRow.person_id = json_data.getString("id");
+					resultRow.name = json_data.getString("name");
+					resultRow.favorite_color = json_data.getString("favorite_color");
+					resultRow.birthday = json_data.getString("birthday");
+					resultRow.profilbild = json_data.getString("profilbild");
+					arrayOfWebData.add(resultRow);
+				}	
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			return null;	
+		}
+		@Override
+		protected void onPostExecute(Void result) {
+			// TODO Auto-generated method stub
+			super.onPostExecute(result);
+			populateListView();
+		}	
+	}
+	
+	
+	
+	
+	public void populateListView()
+	{
+		final ListView myListView = (ListView)findViewById(R.id.myListView);
+		// Initialize FancyAdapter object:
+		aa = new FancyAdapter();
+		myListView.setAdapter(aa);	
+		
+		myListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) 
+            {
+                // Get Person "behind" the clicked item
+                Person p = (Person) myListView.getItemAtPosition(position);
+
+                // Log the fields to check if we got the info we want
+                Log.i("SomeTag", "Persons name: " + p.name);
+                Log.i("SomeTag", "Persons id : " + p.person_id);
+
+                Intent i = new Intent(MainActivity.this,ProfilAnsehen.class);
+                i.putExtra("mitglied_id", p.person_id);
+                i.putExtra("mitglied_benutzername", p.name);
+                i.putExtra("profilbild", p.profilbild);
+                startActivity(i);
+            }
+        });
+	}
+	
+
+	class FancyAdapter extends ArrayAdapter<Person>
+	{
+		FancyAdapter(){
+			super(MainActivity.this,android.R.layout.simple_list_item_1,arrayOfWebData);
+			//imageLoader = new ImageLoader(MainActivity.this);
+		}
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			final ViewHolder holder;
+			if(convertView == null){
+				LayoutInflater inflater = getLayoutInflater();
+				convertView = inflater.inflate(R.layout.row3, null);
+				holder = new ViewHolder(convertView);
+				convertView.setTag(holder);	
+			}else{
+				holder = (ViewHolder)convertView.getTag();
+			}
+			holder.populateFrom(arrayOfWebData.get(position));
+			return convertView;	
+		}
+	}
+	
+	class ViewHolder
+	{
+		public TextView name = null;
+		public TextView birthday = null;
+		public TextView favorite_color = null;
+		public ImageView profilbild = null;
+		//public ImageLoader imageLoader;
+		ImageLoader imageLoader = new ImageLoader(MainActivity.this);
+		
+		ViewHolder(View row){
+			name = (TextView)row.findViewById(R.id.name);
+			birthday = (TextView)row.findViewById(R.id.birthday);
+			favorite_color = (TextView)row.findViewById(R.id.favorite_color);
+			profilbild = (ImageView)row.findViewById(R.id.imageView1);	
+		}
+		// Notice we have to change our populateFrom() to take an argument of type "Person"
+		void populateFrom(Person r){
+			name.setText(r.name);
+			birthday.setText(r.birthday);
+			favorite_color.setText(r.favorite_color);
+			imageLoader.DisplayImage(r.profilbild, profilbild);	
+		}	
+	}
+}
